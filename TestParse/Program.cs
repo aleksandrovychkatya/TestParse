@@ -12,7 +12,41 @@ namespace TestParse
     {
         static void Main(string[] args)
         {
-            List<string> categoryNames = new List<string> {  "monitoring", "insulin", "meters", "test" };
+
+
+            WebClient wc = new WebClient();
+            wc.Encoding = System.Text.Encoding.UTF8;
+            string htmlStr = wc.DownloadString("https://diaexpert.ua/");
+            //681
+            var text = FindText(htmlStr, @"<div class=" + '\u0022' + @"mega-toggle-blocks-right" + '\u0022' , @"</header>");
+            Console.WriteLine(text);
+          //  var testText = FindText(text, @"href=", @"</li>");
+           
+
+            var regexpHref = new Regex(@"href\s*=\s*[""'](.*?)[""']", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+            var matches = regexpHref.Matches(text);
+            List<string> names = new List<string>();
+            Console.WriteLine("Test Text:");
+            foreach(Match x in matches)
+            {
+                var name = FindText(x.Value, @"product-category/", @"/");
+                if(name != "")
+                {
+                    names.Add(name);
+                }
+            }
+            IEnumerable<string> distinctNames = names.Distinct();
+            Console.WriteLine(distinctNames.Count());
+
+
+
+
+
+
+
+
+
+            List<string> categoryNames = new List<string> {  "monitoring", "insulin", "meters", "test", "lancets", "vitamins", "foods", "accessories" };
            
 
 
@@ -28,8 +62,8 @@ namespace TestParse
                     page++;
                    currentPageLinks = getLinksFromCategory(categoryName + makePage(page));
                 }
-                Console.WriteLine(categoryName);
-                Console.WriteLine(String.Join("\n", allCategoryLinks));
+               // Console.WriteLine(categoryName);
+               // Console.WriteLine(String.Join("\n", allCategoryLinks));
 
             }
 
@@ -37,18 +71,54 @@ namespace TestParse
             Console.ReadLine();
         }
 
+        public Product createProductsFromHTMLText(string link)
+        {
+            WebClient wc = new WebClient();
+            wc.Encoding = System.Text.Encoding.UTF8;
+            string htmlStr = wc.DownloadString(link);
+
+            var textForProduct = FindText(htmlStr, @"<div data-thumb=", @"<section class=" + '\u0022' + @"up-sells upsells products" + '\u0022' + @">");
+
+            string name = FindText(textForProduct, @"<h1 class=" + '\u0022' + @"product_title entry-title" + '\u0022' + @">", @"</h1>");
+            string brand = FindText(textForProduct, @"title=" + '\u0022' + @"Посмотреть бренд" + '\u0022' + @">", @"</a>");
+            var price = int.Parse(FindText(textForProduct, @"<bdi>", @"&nbsp;"));
+            string shortDescr = FindText(textForProduct, @"<p>", @"</p>");
+            string fullDescr = FindText(textForProduct, @"<div class=" + '\u0022' + @"wcz-inner" + '\u0022' + @">", @"</ul>");
+            fullDescr = Regex.Replace(fullDescr, "<[^>]+>", string.Empty);
+            string productLink = link ;
+            string img = FindText(textForProduct, @"<a href=" + '\u0022', '\u0022' + @"><img");
+            //Category category = ;
+
+            /*Console.WriteLine("Product:");
+            Console.WriteLine(name);
+            Console.WriteLine(brand);
+            Console.WriteLine(price);
+            Console.WriteLine(shortDescr);
+            Console.WriteLine(fullDescr);
+            Console.WriteLine(img);*/
+            return new Product {
+                Name = name,
+                Brand = brand,
+                Price = price,
+                ShortDescription = shortDescr,
+                FullDescription = fullDescr,
+                Link = productLink,
+                Image = img,
+                //CategoryOfProduct = new Category()
+            };
+            
+        }
+
         public static List<string> getLinksFromCategory(string categoryName)
         {
             try
             {
                 WebClient wc = new WebClient();
+                wc.Encoding = System.Text.Encoding.UTF8;
                 string htmlStr = wc.DownloadString("https://diaexpert.ua/product-category/" + categoryName + "/");
 
                 var txtTitle = FindText(htmlStr, @"<ul class=" + '\u0022' + @"products columns-4" + '\u0022' + @">", @"</ul>");
-
-
-                //Регулярное выражение для поиска A тега
-                var regexpATag = new Regex(@"<a[^<>]*>[^<]*<\/a>", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+               
                 //Регулярное выражение для поиска href свойства
                 var regexpHref = new Regex(@"href\s*=\s*[""'](.*?)[""']", RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
